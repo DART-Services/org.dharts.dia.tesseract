@@ -1,0 +1,11 @@
+Fork of the Tess4J codebase. Right now, this is intended for improved documentation. Overtime, 
+we will likely need to modify the main C header files and re-compile DLLs to provide a cleaner
+interface for the JNI bridge. Notably, we need to avoid the potential memory leak issues caused
+returning refernces to objects (e.g., Strings) that need to be deleted, without providing hooks
+to delete those objects.  
+
+<p>
+This package is intended only for internal use and should not be used by clients of 
+the <code>org.dharts.dia.tesseract</code> package. It's classes and method signatures are 
+subject to change at any time.
+</p> 
