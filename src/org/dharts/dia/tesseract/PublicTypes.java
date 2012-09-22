@@ -158,7 +158,25 @@ public interface PublicTypes {
         PolyBlockType(int ord) {
             value = ord;
         }
-    }
+        
+        /** Given that there are several different block types that denote textual content, 
+         *  this tests to see if a supplied block type is one of those types. */
+        public static boolean isText(PolyBlockType type) {
+            return type == FLOWING_TEXT || 
+                   type == HEADING_TEXT ||
+                   type == PULLOUT_TEXT ||
+                   type == VERTICAL_TEXT || 
+                   type == CAPTION_TEXT;
+        }
+
+        /** Given that there are several different block types that denote image content, 
+         *  this tests to see if a supplied block type is one of those types. */
+        public static boolean isImage(PolyBlockType type) {
+            return type == FLOWING_IMAGE || 
+                    type == HEADING_IMAGE ||
+                    type == PULLOUT_IMAGE;
+        }
+    } 
     
     /**
      * <pre>
