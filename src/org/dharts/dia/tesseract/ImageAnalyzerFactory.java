@@ -201,6 +201,14 @@ public class ImageAnalyzerFactory {
         api.TessBaseAPIDelete(handle);
     }
     
+    /** 
+     * Indicates whether this factory has been closed and should no longer be used.
+     * @return <tt>true</tt> if this factory has been closed.
+     */
+    public boolean isClosed() {
+        return destroyed;
+    }
+    
     /**
      * Initializes the handle to the Tesseract engine.
      * 
