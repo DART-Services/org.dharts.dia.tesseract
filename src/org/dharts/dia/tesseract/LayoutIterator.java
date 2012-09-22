@@ -279,8 +279,9 @@ public class LayoutIterator {
                             left, top, right, bottom);
         
         if (!ImageAnalyzerFactory.toBoolean(exists)) {
-            throw new TesseractException("There is no current element at this level of " +
-            		"the page hierarchy (" + level + ").");
+            return null; // HACK: for testing
+//            throw new TesseractException("There is no current element at this level of " +
+//            		"the page hierarchy (" + level + ").");
         }
         
         return new BoundingBox(left.get(), top.get(), right.get(), bottom.get());
@@ -310,6 +311,7 @@ public class LayoutIterator {
      * @throws TesseractException If no baseline exists at the current position
      */
     public Baseline getBaseline(Level level) throws TesseractException {
+        // FIXME this doesn't seem to work reliably for Blocks
         IntBuffer x1 = IntBuffer.allocate(1);
         IntBuffer y1 = IntBuffer.allocate(1);
         IntBuffer x2 = IntBuffer.allocate(1);
@@ -398,6 +400,30 @@ public class LayoutIterator {
             this.right = right;
             this.bottom = bottom;
         }
+        
+        public boolean contains(BoundingBox box) {
+            return false;
+        }
+        
+        public boolean intersects(BoundingBox box) {
+            return false;
+        }
+
+        public BoundingBox intersection(BoundingBox box) {
+            return null;
+        }
+        
+        public BoundingBox union(BoundingBox box) {
+            return null;
+        }
+        
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Bounding Box: (")
+              .append(left).append(", ").append(top).append(") x (")
+              .append(right).append(", ").append(bottom).append(")");
+            return sb.toString();
+        }
     }
 
     /**
@@ -413,11 +439,19 @@ public class LayoutIterator {
         public final int x2;
         public final int y2;
         
-        private Baseline(int x1, int y1, int x2, int y2) {
+        public Baseline(int x1, int y1, int x2, int y2) {
             this.x1 = x1;
             this.y1 = y1;
             this.x2 = x2;
             this.y2 = y2;
+        }
+        
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Baseline: (")
+              .append(x1).append(", ").append(y1).append(") x (")
+              .append(x2).append(", ").append(y2).append(")");
+            return sb.toString();
         }
     }
     
