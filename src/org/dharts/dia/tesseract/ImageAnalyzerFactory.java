@@ -234,7 +234,7 @@ public class ImageAnalyzerFactory {
     /** Throws an exception if the factory has been destroyed. */
     private void checkDestroyed() throws TesseractException {
         if (this.destroyed) {
-            throw new TesseractException("Invalid Access: This TesseractMediator has " +
+            throw new TesseractException("Invalid Access: This ImageAnalyzerFactory has " +
                     "already been closed.");
         }
     }
@@ -244,7 +244,7 @@ public class ImageAnalyzerFactory {
         // check for any current analyzers and throw exception if found
         if (this.analyzer != null) {
             throw new TesseractException("Concurrent Access Exception: An analyzer is " +
-                    "already in use for this TesseractMediator. Be sure to call 'close'" +
+                    "already in use for this ImageAnalyzerFactory. Be sure to call 'close'" +
                     "on any existing analyzers prior to creating another.");
         }
     }
@@ -304,7 +304,6 @@ public class ImageAnalyzerFactory {
      */
     void release(ImageAnalyzerImpl analyzer) {
         this.analyzer = null;
-        // 
     }
     
     /**
@@ -345,6 +344,7 @@ public class ImageAnalyzerFactory {
         
         // One solution is to create expose a mutable PageConfigurationData instance for 
         // each factory that contains all configuration variables that have been set. 
+        checkDestroyed();
         checkAnalyzer();
         
         // HACK: perform pre and post configuration. Need to find a better way to achieve this
@@ -381,6 +381,7 @@ public class ImageAnalyzerFactory {
      * @throws TesseractException
      */
     public ImageAnalyzer createImageAnalyzer(BufferedImage image) throws TesseractException {
+        checkDestroyed();
         checkAnalyzer();
         
         this.analyzer = new ImageAnalyzerImpl(image);

@@ -58,6 +58,7 @@ public class AnalyzerFactoryBugs extends TestCase {
             }
         }
     }
+    
     /**
      * Tests for https://github.com/DART-Services/org.dharts.dia.tesseract/issues/10
      * 
