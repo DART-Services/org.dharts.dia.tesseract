@@ -24,43 +24,38 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import junit.framework.TestCase;
-
 import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
+import org.junit.Test;
 
-public class MediatorTests extends TestCase {
-    
-    public void setUp() {
-        
-    }
-    
-    public void tearDown() {
-        
-    }
+import static org.junit.Assert.*;
 
+public class MediatorTests {
+    
+    File tessDataPath = new File(".");
+    File simpleImageFile = new File("res/testing/simple.png");
+    File poetryImageFile = new File("res/testing/simple_poetry.png");
+    
+    @Test
     public void testCreateMediator() throws IOException, TesseractException {
-        // Note that you need to compile this with an x86 version of Java, not the 64 bit 
-        // version
-        File f = new File(".");
-        assertTrue("Data directory does not exist: " + f.getAbsolutePath(), f.exists());
-        assertTrue("Data directory cannot be read: " + f.getAbsolutePath(), f.canRead());
+        // Note that you need to compile this with an x86 version of Java, not the 64 bit version
+        assertTrue("Data directory does not exist: " + tessDataPath.getAbsolutePath(), tessDataPath.exists());
+        assertTrue("Data directory cannot be read: " + tessDataPath.getAbsolutePath(), tessDataPath.canRead());
         
-        ImageAnalyzerFactory mediator = ImageAnalyzerFactory.createFactory(f);
+        ImageAnalyzerFactory mediator = ImageAnalyzerFactory.createFactory(tessDataPath);
         assertNotNull("Failed to create mediator", mediator);
         
         mediator.close();
     }
     
+    @Test
     public void testAnalyzer() throws IOException, TesseractException {
-        // Note that you need to compile this with an x86 version of Java, not the 64 bit 
-        // version
 
         ImageAnalyzerFactory mediator = null;
         try {
-            mediator = ImageAnalyzerFactory.createFactory(new File("."));
+            mediator = ImageAnalyzerFactory.createFactory(tessDataPath);
             
-            BufferedImage image = ImageIO.read(new File("eurotext.png"));
+            BufferedImage image = ImageIO.read(simpleImageFile);
             ImageAnalyzer analyzer = mediator.createImageAnalyzer(image);
             
             assertNotNull("Failed to create analyzer", analyzer);
@@ -72,15 +67,13 @@ public class MediatorTests extends TestCase {
         }
     }
     
+    @Test
     public void testPageIterator() throws IOException, TesseractException {
-        // Note that you need to compile this with an x86 version of Java, not the 64 bit 
-        // version
-        
         ImageAnalyzerFactory mediator = null;
         try {
             mediator = ImageAnalyzerFactory.createFactory(new File("."));
             
-            BufferedImage image = ImageIO.read(new File("images/300abbpro-137.png"));
+            BufferedImage image = ImageIO.read(poetryImageFile);
             ImageAnalyzer analyzer = mediator.createImageAnalyzer(image);
             LayoutIterator iterator = analyzer.analyzeLayout();
             assertNotNull("Failed to create iterator", iterator);

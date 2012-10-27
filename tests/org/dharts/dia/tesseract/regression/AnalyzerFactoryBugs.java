@@ -24,16 +24,16 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import junit.framework.TestCase;
-
 import org.dharts.dia.tesseract.ImageAnalyzer;
 import org.dharts.dia.tesseract.ImageAnalyzerFactory;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * @author Neal Audenaert
  *
  */
-public class AnalyzerFactoryBugs extends TestCase {
+public class AnalyzerFactoryBugs {
     private File dataDir = new File(".");
     private File testImageFile = new File("images/visualpage/300allday-18.png");
     
@@ -68,6 +68,7 @@ public class AnalyzerFactoryBugs extends TestCase {
      * 
      * <p>This should generate an Exception and not invoke the C++ layer.
      */
+    @Test
     public void testOpenCloseUseAnalyzer() {
         BufferedImage image = null;
         
@@ -80,7 +81,7 @@ public class AnalyzerFactoryBugs extends TestCase {
             assertFalse("Could not open and imediately close the analyzer factory: " + ex.getMessage(), true);
         }
             
-        // sanity checks on the iamge file
+        // sanity checks on the image file
         assertTrue("Test image does not exist", testImageFile.exists());
         assertTrue("Test image is not readable", testImageFile.canRead());
         assertTrue("Test image is not a file", testImageFile.isFile());
