@@ -30,7 +30,8 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.dharts.dia.tesseract.PublicTypes.OcrEngineMode;
 import org.dharts.dia.tesseract.PublicTypes.PageSegMode;
-import org.dharts.dia.tesseract.TesseractHandle.InvalidStateException;
+import org.dharts.dia.tesseract.handles.TesseractHandle;
+import org.dharts.dia.tesseract.handles.TesseractHandle.InvalidStateException;
 
 /**
  * Manages a connection to the underlying Tesseract implementation and creates 

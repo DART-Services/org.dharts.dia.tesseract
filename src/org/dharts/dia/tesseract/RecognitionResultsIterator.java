@@ -21,7 +21,8 @@ package org.dharts.dia.tesseract;
 import java.nio.IntBuffer;
 
 import org.apache.log4j.Logger;
-import org.dharts.dia.tesseract.TesseractHandle.ReleasableContext;
+import org.dharts.dia.tesseract.handles.ReleasableContext;
+import org.dharts.dia.tesseract.handles.TesseractHandle;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
 
 // FIXME Wrap TessAPI in lower level handle
@@ -57,7 +58,9 @@ public class RecognitionResultsIterator extends LayoutIterator {
     
     private final TessAPI.TessResultIterator iterator;
 
-    RecognitionResultsIterator(ReleasableContext context, TessAPI.TessResultIterator iterator) {
+    public RecognitionResultsIterator(ReleasableContext context, TessAPI.TessResultIterator iterator) {
+        // FIXME make this package scoped. It should accept a ResultIteratorHandle (to be 
+        //       returned by TesseractHandle 
         super(context, iterator);
         this.iterator = iterator;
     }

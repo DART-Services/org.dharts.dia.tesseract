@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.dharts.dia.tesseract;
+package org.dharts.dia.tesseract.handles;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -29,6 +29,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.dharts.dia.tesseract.InvalidParameterException;
+import org.dharts.dia.tesseract.LayoutIterator;
+import org.dharts.dia.tesseract.PublicTypes;
+import org.dharts.dia.tesseract.RecognitionResultsIterator;
+import org.dharts.dia.tesseract.TesseractException;
 import org.dharts.dia.tesseract.tess4j.ImageIOHelper;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
 import org.dharts.dia.tesseract.tess4j.TessAPI.TessBaseAPI;
@@ -55,16 +60,6 @@ public class TesseractHandle {
             Collections.unmodifiableCollection(Arrays.asList(State.UNINITIALIZED, State.INITIALIZED, State.IMAGE_SET));
     
     /**
-     * @author Neal Audenaert
-     */
-    interface ReleasableContext {
-        
-        TessAPI getAPI();
-        
-        void release();
-    }
-    
-    /**
      * Converts integer values returned by the underlying API into Java booleans.
      * 
      * @param value The value to convert.
@@ -73,7 +68,7 @@ public class TesseractHandle {
      * @throws TesseractException If the supplied value is any value other than 
      *      <tt>TessAPI.TRUE</tt> or <tt>TessAPI.FALSE</tt>.
      */
-    static boolean toBoolean(int value) throws TesseractException {
+    public static boolean toBoolean(int value) throws TesseractException {
         boolean result;
         if (value == TessAPI.TRUE) {
             result = true;
@@ -543,6 +538,8 @@ public class TesseractHandle {
     public LayoutIterator analyseLayout() throws InvalidStateException {
         requireState(State.IMAGE_SET);
         
+        // FIXME Construct a handle to access the iterator, rather than an iterator itself.
+        //       Clients can construct the iterator on the handle.
         final TessPageIterator piHandle = api.TessBaseAPIAnalyseLayout(handle);
         LayoutIterator iterator = new LayoutIterator(new ReleasableContext() {
                 // FIXME need to allow the layout iterator to be cloned.
@@ -580,6 +577,8 @@ public class TesseractHandle {
     public RecognitionResultsIterator recognize() throws InvalidStateException {
         requireState(State.IMAGE_SET);
         
+        // FIXME Construct a handle to access the iterator, rather than an iterator itself.
+        //       Clients can construct the iterator on the handle.
         final TessResultIterator riHandle = api.TessBaseAPIGetIterator(handle);
         RecognitionResultsIterator iterator = new RecognitionResultsIterator(
                 new ReleasableContext() {

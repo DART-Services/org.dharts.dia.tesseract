@@ -28,7 +28,7 @@ import java.util.Map;
 public class InvalidParameterException extends TesseractException {
     public final Map<String, String> badValues;
     
-    InvalidParameterException(String msg, Map<String, String> badValues) {
+    public InvalidParameterException(String msg, Map<String, String> badValues) {
         super(msg);
         this.badValues = badValues;
     }

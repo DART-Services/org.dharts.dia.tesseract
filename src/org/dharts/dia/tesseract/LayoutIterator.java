@@ -24,11 +24,12 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
-import org.dharts.dia.tesseract.TesseractHandle.ReleasableContext;
 import org.dharts.dia.tesseract.PublicTypes.Orientation;
 import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 import org.dharts.dia.tesseract.PublicTypes.TextlineOrder;
 import org.dharts.dia.tesseract.PublicTypes.WritingDirection;
+import org.dharts.dia.tesseract.handles.ReleasableContext;
+import org.dharts.dia.tesseract.handles.TesseractHandle;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
 
 /**
@@ -124,7 +125,9 @@ public class LayoutIterator {
      * @param iterator A pointer to be used to reference the corresponding object in 
      *      the C++ code.
      */
-    protected LayoutIterator(ReleasableContext context, TessAPI.TessPageIterator iterator) {
+    public LayoutIterator(ReleasableContext context, TessAPI.TessPageIterator iterator) {
+        // FIXME make this package scoped. It should accept a PageIteratorHandle (to be 
+        //       returned by TesseractHandle 
         this.context = context;
         this.iterator = iterator;
     }
