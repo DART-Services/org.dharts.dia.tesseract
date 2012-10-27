@@ -48,34 +48,19 @@ public class PageConfigurationData {
     
     void configure(ImageAnalyzerFactory mediator) throws TesseractException {
         // update the page segmentation mode
-        mediator.api.TessBaseAPISetPageSegMode(mediator.handle, psm.value);
+        mediator.handle.setPageSegMode(psm);
         
         // update any configurations variables
-        int success = Integer.MIN_VALUE;
-        Map<String, String> errors = new HashMap<String, String>();
-        try {
-            for (String name : properties.keySet()) {
-                String value = properties.get(name);
-                success = mediator.api.TessBaseAPISetVariable(mediator.handle, name, value); 
-                if (!ImageAnalyzerFactory.toBoolean(success)) {
-                    errors.put(name, properties.get(name));
-                }
-            }
-        } catch (TesseractException e) {
-            throw new RuntimeException("Invalid response from Tesseract, expected " +
-                    "boolean valued integer (0 or 1) but got " + success, e);
-        }
-        
-        if (!errors.isEmpty()) {
-            throw new InvalidParameterException(
-                    "Could not create analyzer. Invalid variable settings: ", errors);
+        for (String name : properties.keySet()) {
+            String value = properties.get(name);
+            mediator.handle.setVariable(name, value); 
         }
     }
     
-    void configure(ImageAnalyzerFactory factory, ImageAnalyzer analyzer) {
+    void configure(ImageAnalyzerFactory factory, ImageAnalyzer analyzer) throws TesseractException {
         // source resolution needs to be specified after the image is set
         if (ppi != null) {
-            factory.api.TessBaseAPISetSourceResolution(factory.handle, ppi);
+            factory.handle.setSourceResolution(ppi);
         }
     }
     

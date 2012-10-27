@@ -20,9 +20,11 @@ package org.dharts.dia.tesseract;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
-import org.dharts.dia.tesseract.ImageAnalyzerFactory.ReleasableContext;
+import org.dharts.dia.tesseract.TesseractHandle.ReleasableContext;
 import org.dharts.dia.tesseract.PublicTypes.Orientation;
 import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 import org.dharts.dia.tesseract.PublicTypes.TextlineOrder;
@@ -113,7 +115,7 @@ public class LayoutIterator {
     
     private final TessAPI.TessPageIterator iterator;
     protected final ReleasableContext context;
-//    protected final ImageAnalyzer analyzer;
+    private final List<CloseListener<LayoutIterator>> listeners = new CopyOnWriteArrayList<>();
 
     /**
      * Constructs a new <code>LayoutIterator</code>
@@ -132,15 +134,24 @@ public class LayoutIterator {
      */
     public void close() {
         context.release();
-//        api.TessPageIteratorDelete(iterator);
-//        analyzer.release(this);
+        for (CloseListener<LayoutIterator> ears: listeners) {
+            ears.closed(this);
+        }
+        
+        listeners.clear();
     }
 
-//    public TessAPI.TessPageIterator clone() {
-//        // FIXME need to track and close all cloned LayoutIterators as well. Should not expose 
-//        //       TessAPI to the public.
-//        return context.getAPI().TessPageIteratorCopy(iterator);
-//    }
+    public ListenerRegistration onClose(final CloseListener<LayoutIterator> ears) {
+        listeners.add(ears);
+        
+        return new ListenerRegistration() {
+            
+            @Override
+            public void unregister() {
+                LayoutIterator.this.listeners.remove(ears);
+            }
+        };
+    }
 
     /**
      * Moves the iterator to point to the start of the page to begin an iteration. Note that,
@@ -174,7 +185,7 @@ public class LayoutIterator {
         int atEnd = context.getAPI().TessPageIteratorNext(iterator, level.ordinal());
         
         try {
-            return ImageAnalyzerFactory.toBoolean(atEnd);
+            return TesseractHandle.toBoolean(atEnd);
         } catch (TesseractException e) {
             LOGGER.error("Invalid boolean supplied.", e);
             return false;
@@ -207,7 +218,7 @@ public class LayoutIterator {
         int result = context.getAPI().TessPageIteratorIsAtBeginningOf(iterator, level.ordinal());
         
         try {
-            return ImageAnalyzerFactory.toBoolean(result);
+            return TesseractHandle.toBoolean(result);
         } catch (TesseractException e) {
             LOGGER.error("Invalid boolean supplied.", e);
             return false;
@@ -250,7 +261,7 @@ public class LayoutIterator {
         int result = context.getAPI().TessPageIteratorIsAtFinalElement(iterator, level.value, element.value);
         
         try {
-            return ImageAnalyzerFactory.toBoolean(result);
+            return TesseractHandle.toBoolean(result);
         } catch (TesseractException e) {
             LOGGER.error("Invalid boolean supplied.", e);
             return false;
@@ -278,7 +289,7 @@ public class LayoutIterator {
         int exists = context.getAPI().TessPageIteratorBoundingBox(iterator, level.value,
                             left, top, right, bottom);
         
-        if (!ImageAnalyzerFactory.toBoolean(exists)) {
+        if (!TesseractHandle.toBoolean(exists)) {
             return null; // HACK: for testing
 //            throw new TesseractException("There is no current element at this level of " +
 //            		"the page hierarchy (" + level + ").");
@@ -319,7 +330,7 @@ public class LayoutIterator {
         
         int exists = context.getAPI().TessPageIteratorBaseline(iterator, level.value, x1, y1, x2, y2);
         
-        if (!ImageAnalyzerFactory.toBoolean(exists)) {
+        if (!TesseractHandle.toBoolean(exists)) {
             throw new TesseractException("There is no current element at this level of " +
                     "the page hierarchy (" + level + ").");
         }

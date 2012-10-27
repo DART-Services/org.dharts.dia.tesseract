@@ -102,7 +102,21 @@ public interface PublicTypes {
             value = ord;
         }
         
-        // TODO implement inequality test
+        /**
+         * Returns the <code>PageSegMode</code> instance corresponding to the supplied 
+         * integer value.
+         * 
+         * @throws TesseractException If the supplied mode does not exist. 
+         */
+        public static PageSegMode valueOf(int mode) throws TesseractException {
+            for (PageSegMode test: PageSegMode.values()) {
+                if (mode == test.value) {
+                    return test;
+                }
+            }
+            
+            throw new TesseractException("No such page sementation mode: " + mode);
+        }
     }
     
     /**

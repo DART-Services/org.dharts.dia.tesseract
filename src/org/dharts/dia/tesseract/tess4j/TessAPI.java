@@ -265,10 +265,12 @@ public interface TessAPI extends Library {
      * TessBaseAPIs in different threads in parallel, UNLESS: you use
      * <code>SetVariable</code> on some of the Params in classify and textord.
      * If you do, then the effect will be to change it for all your
-     * instances.<br /> <br /> Start tesseract. Returns zero on success and -1
-     * on failure. NOTE that the only members that may be called before Init are
-     * those listed above here in the class definition.<br /> <br /> The
-     * <code>datapath</code> must be the name of the parent directory of
+     * instances.
+     * 
+     * Start tesseract. Returns zero on success and -1 on failure. NOTE that the only members
+     * that may be called before Init are those listed above here in the class definition.
+     * 
+     * The <code>datapath</code> must be the name of the parent directory of
      * tessdata and must end in / . Any name after the last / will be stripped.
      * The language is (usually) an
      * <code>ISO 639-3</code> string or

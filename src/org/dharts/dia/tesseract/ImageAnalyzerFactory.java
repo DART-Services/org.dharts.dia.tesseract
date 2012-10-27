@@ -22,18 +22,15 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.dharts.dia.tesseract.PublicTypes.OcrEngineMode;
 import org.dharts.dia.tesseract.PublicTypes.PageSegMode;
-import org.dharts.dia.tesseract.tess4j.ImageIOHelper;
-import org.dharts.dia.tesseract.tess4j.TessAPI;
+import org.dharts.dia.tesseract.TesseractHandle.InvalidStateException;
 
 /**
  * Manages a connection to the underlying Tesseract implementation and creates 
@@ -47,39 +44,6 @@ import org.dharts.dia.tesseract.tess4j.TessAPI;
 public class ImageAnalyzerFactory {
     private static final Logger LOGGER = Logger.getLogger(ImageAnalyzerFactory.class);
 
-    /**
-     * @author Neal Audenaert
-     */
-    interface ReleasableContext {
-        
-        TessAPI getAPI();
-        
-        void release();
-    }
-
-    /**
-     * Converts integer values returned by the underlying API into Java booleans.
-     * 
-     * @param value The value to convert.
-     * @return <tt>true</tt> if value equals <tt>TessAPI.TRUE</tt>, <tt>false</tt> if
-     *      it equals <tt>TessAPI.FALSE</tt>
-     * @throws TesseractException If the supplied value is any value other than 
-     *      <tt>TessAPI.TRUE</tt> or <tt>TessAPI.FALSE</tt>.
-     */
-    static boolean toBoolean(int value) throws TesseractException {
-        boolean result;
-        if (value == TessAPI.TRUE) {
-            result = true;
-        } else if (value == TessAPI.FALSE) {
-            result = false;
-        } else {
-            throw new TesseractException("Invlid boolean value. Expected " + 
-                    TessAPI.TRUE  + " or " + TessAPI.FALSE + ". Got " + value);
-        }
-        
-        return result;
-    }
-    
     /**
      * Instantiates a new {@link ImageAnalyzerFactory} for the supplied data path.
      * 
@@ -152,14 +116,14 @@ public class ImageAnalyzerFactory {
     // MEMBER VARIABLES
     //========================================================================================
     
-    final TessAPI api;
-    final TessAPI.TessBaseAPI handle;
+    // final TessAPI api;
+    final TesseractHandle handle;
     
     private final String datapath;
     private final String language;
     private final OcrEngineMode oem;
     
-    private boolean destroyed = false;
+    private volatile boolean destroyed = false;
     
     PageSegMode psm = PageSegMode.AUTO;
     Map<String, String> properties = new HashMap<String, String>();
@@ -170,18 +134,19 @@ public class ImageAnalyzerFactory {
     // INITIALIZATION METHODS
     //========================================================================================
     
-    private ImageAnalyzerFactory(String datapath, String language, OcrEngineMode oem) {
+    private ImageAnalyzerFactory(String datapath, String language, OcrEngineMode oem) 
+            throws TesseractException {
         this.datapath = datapath;
         this.language = language;
         this.oem = oem;
         
-        api = TessAPI.INSTANCE;
+        handle = TesseractHandle.create();
         
-        // TODO get from resource pool
-        handle = api.TessBaseAPICreate();
-        
-        // set the default page segmentation mode
-        api.TessBaseAPISetPageSegMode(handle, PageSegMode.AUTO.value);
+//        try {
+//            handle.setPageSegMode(PageSegMode.AUTO);
+//        } catch (InvalidStateException ise) {
+//            throw new TesseractException("Could not intialize connection to Tesseract", ise);
+//        }
     }
     
     protected void finalize() {
@@ -198,7 +163,11 @@ public class ImageAnalyzerFactory {
      */
     public void close() {
         destroyed = true;
-        api.TessBaseAPIDelete(handle);
+        try {
+            handle.close();
+        } catch (InvalidStateException hce) {
+            LOGGER.error("Attempt to close a handle that is not in a closable state.", hce);
+        }
     }
     
     /** 
@@ -216,19 +185,8 @@ public class ImageAnalyzerFactory {
      */
     private void init() throws TesseractException {
         checkDestroyed();
-        boolean success = false;
-        int iSuccess = api.TessBaseAPIInit2(handle, datapath, language, oem.value);
         
-        try {
-            success = toBoolean(iSuccess);
-        } catch (TesseractException e) {
-            throw new RuntimeException("Invalid response from Tesseract, expected " +
-                    "boolean valued integer (0 or 1) but got " + iSuccess, e);
-        }
-        
-        if (!success) {
-            // FIXME throw an exception
-        }
+        handle.init(datapath, language, oem);
     }
     
     /** Throws an exception if the factory has been destroyed. */
@@ -274,13 +232,10 @@ public class ImageAnalyzerFactory {
      * 
      * @return A set containing all loaded languages.
      */
-    public Set<String> getLoadedLanguages() throws TesseractException {
+    public Collection<String> getLoadedLanguages() throws TesseractException {
         checkDestroyed();
-        // TODO IMPLEMENT ME
-        // See the following in TessAPI, figure out how to work with "PointerByReference" and
-        // how (and if) to delete the returned result. 
-        // PointerByReference api.TessBaseAPIGetLoadedLanguagesAsVector(TessAPI.TessBaseAPI handle);
-        return new HashSet<String>();
+        
+        return handle.getLoadedLanguages();
     }
     
     //========================================================================================
@@ -420,12 +375,6 @@ public class ImageAnalyzerFactory {
         private final Map<String, String> properties;
         private final BufferedImage image;
         
-        private final ByteBuffer imagedata;
-        private final int width;
-        private final int height;
-        private final int bytesPerPixel;
-        private final int bytesPerLine;
-        
         // The iterator currently in use (if any)
         private LayoutIterator iterator = null;
         private boolean closed = false;
@@ -445,51 +394,29 @@ public class ImageAnalyzerFactory {
             this.properties = Collections.unmodifiableMap(
                     new HashMap<String, String>(ImageAnalyzerFactory.this.properties));
             
-            image.getRaster().getDataBuffer();
-            this.imagedata = ImageIOHelper.convertImageData(image);
-            this.width = image.getWidth();
-            this.height = image.getHeight(); 
-            
-            int bpp = image.getColorModel().getPixelSize();
-            this.bytesPerPixel = bpp / 8;                              // bytes per pixel
-            this.bytesPerLine = (int) Math.ceil(width * bpp / 8.0);    // bytes per line
-            
         }
         
-        private void init() throws InvalidParameterException {
+        private void init() throws InvalidParameterException, TesseractException {
             // update the page segmentation mode
-            ImageAnalyzerFactory.this.api.TessBaseAPISetPageSegMode(
-                    ImageAnalyzerFactory.this.handle, psm.value);
+            TesseractHandle handle = ImageAnalyzerFactory.this.handle;
+            handle.setPageSegMode(psm);
             
-            // update any configurations variables
-            int success = Integer.MIN_VALUE;
-            Map<String, String> errors = new HashMap<String, String>();
             try {
+                // update any configurations variables
                 for (String name : properties.keySet()) {
-                    String value = properties.get(name);
-                    success = ImageAnalyzerFactory.this.api.TessBaseAPISetVariable(
-                            ImageAnalyzerFactory.this.handle, name, value); 
-                    if (!ImageAnalyzerFactory.toBoolean(success)) {
-                        errors.put(name, properties.get(name));
-                    }
+                    handle.setVariable(name, properties.get(name));
                 }
-            } catch (TesseractException e) {
-                throw new RuntimeException("Invalid response from Tesseract, expected " +
-                        "boolean valued integer (0 or 1) but got " + success, e);
-            }
-            
-            if (!errors.isEmpty()) {
-                throw new InvalidParameterException(
-                        "Could not create analyzer. Invalid variable settings: ", errors);
-            }
-            
-            ImageAnalyzerFactory.this.api.TessBaseAPISetImage(ImageAnalyzerFactory.this.handle, 
-                    imagedata, width, height, bytesPerPixel, bytesPerLine);
-        }
         
+                handle.setImage(image);
+            } catch (InvalidStateException ise) {
+                throw new TesseractException("Could not set image." , ise);
+            }
+        }
         
         @Override
         public void close() throws TesseractException {
+            // TODO this should clear the set image on the underlying API. Need to figure out
+            //      how to do that.
             checkIterator();
             ImageAnalyzerFactory.this.release(this);
             closed = true;
@@ -508,89 +435,68 @@ public class ImageAnalyzerFactory {
                 throw new TesseractException("Attempt to use an image analyzer that has already been closed.");
             }
         }
+        
         //========================================================================================
         //
         //========================================================================================
+        
+        /** 
+         * Stores a reference to the active iterator and adds a close listener.
+         * @param iterator
+         * @return
+         */
+        private <X extends LayoutIterator> X wrapIterator(final X iterator) {
+            // TODO support cloning
+            this.iterator = iterator;
+            iterator.onClose(new CloseListener<LayoutIterator>() {
+                
+                @Override
+                public void closed(LayoutIterator handle) {
+                    if (ImageAnalyzerImpl.this.iterator == handle)
+                        ImageAnalyzerImpl.this.iterator = null;
+                }
+            });
+            
+            return iterator;
+        }
         
         @Override
         public BufferedImage getImage() {
             return this.image;
         }
         
-        private LayoutIterator doAnalyze() {
-            final TessAPI api = ImageAnalyzerFactory.this.api;
-            final TessAPI.TessPageIterator piHandle = api.TessBaseAPIAnalyseLayout(
-                    ImageAnalyzerFactory.this.handle);
-
-            this.iterator = new LayoutIterator(new ReleasableContext() {
-                    @Override
-                    public void release() {
-                        api.TessPageIteratorDelete(piHandle);
-                        ImageAnalyzerImpl.this.iterator = null;
-                    }
-                    
-                    @Override
-                    public TessAPI getAPI() {
-                        return api;
-                    }
-                }, piHandle);
-            return this.iterator;
-        }
-        
-        private RecognitionResultsIterator doRecognize() {
-            final TessAPI api = ImageAnalyzerFactory.this.api;
-            final TessAPI.TessResultIterator riHandle = api.TessBaseAPIGetIterator(
-                    ImageAnalyzerFactory.this.handle);
-            
-            RecognitionResultsIterator iterator = new RecognitionResultsIterator(
-                    new ReleasableContext() {
-                        @Override
-                        public void release() {
-                            api.TessResultIteratorDelete(riHandle);
-                            ImageAnalyzerImpl.this.iterator = null;
-                        }
-                        
-                        @Override
-                        public TessAPI getAPI() {
-                            return api;
-                        }
-                    }, riHandle);
-            this.iterator = iterator;
-            return iterator;
-        }
-        
         @Override
         public LayoutIterator analyzeLayout() throws TesseractException {
-            checkIterator();
+            checkIterator();  // FIXME state should be managed by handle now
             checkClosed();
-            return doAnalyze();
+            
+            return wrapIterator(handle.analyseLayout());
         }
         
         @Override
         public LayoutIterator analyzeLayout(Rectangle rect) throws TesseractException {
             checkIterator();
             checkClosed();
-            TessAPI api = ImageAnalyzerFactory.this.api;
-            api.TessBaseAPISetRectangle(ImageAnalyzerFactory.this.handle, 
-                    rect.x, rect.y, rect.width, rect.height);
-            return doAnalyze();
+            
+            handle.setRectangle(rect);
+            return wrapIterator(handle.analyseLayout());
         }
         
         @Override
         public RecognitionResultsIterator recognize() throws TesseractException {
             checkIterator();
             checkClosed();
-            return doRecognize();
+            
+            return wrapIterator(handle.recognize());
         }
         
         @Override
         public RecognitionResultsIterator recognize(Rectangle rect) throws TesseractException {
             checkIterator();
             checkClosed();
-            TessAPI api = ImageAnalyzerFactory.this.api;
-            api.TessBaseAPISetRectangle(ImageAnalyzerFactory.this.handle, 
-                    rect.x, rect.y, rect.width, rect.height);
-            return doRecognize();
+            
+            handle.setRectangle(rect);
+            return (RecognitionResultsIterator)(iterator = handle.recognize());
         }
     }
 }

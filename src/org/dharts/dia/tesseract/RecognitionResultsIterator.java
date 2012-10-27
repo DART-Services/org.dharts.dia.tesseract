@@ -21,8 +21,10 @@ package org.dharts.dia.tesseract;
 import java.nio.IntBuffer;
 
 import org.apache.log4j.Logger;
-import org.dharts.dia.tesseract.ImageAnalyzerFactory.ReleasableContext;
+import org.dharts.dia.tesseract.TesseractHandle.ReleasableContext;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
+
+// FIXME Wrap TessAPI in lower level handle
 
 /**
  * Class to iterate over tesseract results, providing access to all levels of the page 
@@ -115,12 +117,12 @@ public class RecognitionResultsIterator extends LayoutIterator {
 
         FontAttributeBuilder builder = new FontAttributeBuilder();
         try {
-            builder.setIsBold(ImageAnalyzerFactory.toBoolean(isBold.get()))
-                   .setIsItalic(ImageAnalyzerFactory.toBoolean(isItalic.get()))
-                   .setIsUnderline(ImageAnalyzerFactory.toBoolean(isUnderlined.get()))
-                   .setIsMonospace(ImageAnalyzerFactory.toBoolean(isMonospace.get()))
-                   .setIsSerif(ImageAnalyzerFactory.toBoolean(isSerif.get()))
-                   .setIsSmallcaps(ImageAnalyzerFactory.toBoolean(isSmallcaps.get()))
+            builder.setIsBold(TesseractHandle.toBoolean(isBold.get()))
+                   .setIsItalic(TesseractHandle.toBoolean(isItalic.get()))
+                   .setIsUnderline(TesseractHandle.toBoolean(isUnderlined.get()))
+                   .setIsMonospace(TesseractHandle.toBoolean(isMonospace.get()))
+                   .setIsSerif(TesseractHandle.toBoolean(isSerif.get()))
+                   .setIsSmallcaps(TesseractHandle.toBoolean(isSmallcaps.get()))
                    .setPointSize(pointsize.get())
                    .setFontId(fontId.get())
                    .setFontName(fontName);
@@ -137,7 +139,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
         int value = context.getAPI().TessResultIteratorWordIsFromDictionary(iterator);
         
         try {
-            return ImageAnalyzerFactory.toBoolean(value);
+            return TesseractHandle.toBoolean(value);
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Invalid boolean value returned by isDictionaryWord.", ex);
             throw new RuntimeException(ex);
@@ -148,7 +150,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
     public final boolean isNumeric() {
         int value = context.getAPI().TessResultIteratorWordIsNumeric(iterator);
         try {
-            return ImageAnalyzerFactory.toBoolean(value);
+            return TesseractHandle.toBoolean(value);
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Invalid boolean value returned by isNumeric.", ex);
             throw new RuntimeException(ex);
@@ -167,7 +169,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
         int value = context.getAPI().TessResultIteratorSymbolIsSubscript(iterator);
         
         try {
-            return ImageAnalyzerFactory.toBoolean(value);
+            return TesseractHandle.toBoolean(value);
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Invalid boolean value returned by isSubscript.", ex);
             throw new RuntimeException(ex);
@@ -179,7 +181,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
         int value = context.getAPI().TessResultIteratorSymbolIsSuperscript(iterator);
         
         try {
-            return ImageAnalyzerFactory.toBoolean(value);
+            return TesseractHandle.toBoolean(value);
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Invalid boolean value returned by isSuperscript.", ex);
             throw new RuntimeException(ex);
@@ -191,7 +193,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
         int value = context.getAPI().TessResultIteratorSymbolIsDropcap(iterator);
 
         try {
-            return ImageAnalyzerFactory.toBoolean(value);
+            return TesseractHandle.toBoolean(value);
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Invalid boolean value returned by isDropcap.", ex);
             throw new RuntimeException(ex);
@@ -276,7 +278,8 @@ public class RecognitionResultsIterator extends LayoutIterator {
      * @author Neal Audenaert
      */
     public static class FontAttributes {
-        // NOTE: This is implicitly mutable after it has been built since there are 
+        // FIXME make this really immutable, 
+        // NOTE: This is implicitly immutable after it has been built since there are 
         //       no accessible mutators.
         private boolean bold;
         private boolean italic;
