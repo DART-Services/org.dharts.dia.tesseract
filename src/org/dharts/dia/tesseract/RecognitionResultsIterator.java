@@ -21,6 +21,7 @@ package org.dharts.dia.tesseract;
 import java.nio.IntBuffer;
 
 import org.apache.log4j.Logger;
+import org.dharts.dia.FontAttributes;
 import org.dharts.dia.tesseract.handles.ReleasableContext;
 import org.dharts.dia.tesseract.handles.TesseractHandle;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
@@ -118,7 +119,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
         String fontName = context.getAPI().TessResultIteratorWordFontAttributes(iterator, 
                 isBold, isItalic, isUnderlined, isMonospace, isSerif, isSmallcaps, pointsize, fontId);
 
-        FontAttributeBuilder builder = new FontAttributeBuilder();
+        FontAttributes.Builder builder = new FontAttributes.Builder();
         try {
             builder.setIsBold(TesseractHandle.toBoolean(isBold.get()))
                    .setIsItalic(TesseractHandle.toBoolean(isItalic.get()))
@@ -129,12 +130,12 @@ public class RecognitionResultsIterator extends LayoutIterator {
                    .setPointSize(pointsize.get())
                    .setFontId(fontId.get())
                    .setFontName(fontName);
+            
+            return builder.build();
         } catch (Exception ex) {
             LOGGER.error("Internal Error: Could not retrieve font attributed.", ex);
             throw new RuntimeException(ex);
         }
-
-        return builder.attrs;
     }
 
     /** @return <code>true</code> if the current word was found in a dictionary. */
@@ -220,124 +221,5 @@ public class RecognitionResultsIterator extends LayoutIterator {
     //========================================================================================
     
     
-    /**
-     * Used to build the FontAttributes object. Once built, a FontAttribute instance should be
-     * immutable.
-     * 
-     * @author Neal Audenaert
-     */
-    private static class FontAttributeBuilder {
-        FontAttributes attrs = new FontAttributes();
-
-        public FontAttributeBuilder setIsBold(boolean flag) {
-            attrs.bold = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setIsItalic(boolean flag) {
-            attrs.italic = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setIsUnderline(boolean flag) {
-            attrs.underlined = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setIsMonospace(boolean flag) {
-            attrs.monospace = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setIsSerif(boolean flag) {
-            attrs.serif = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setIsSmallcaps(boolean flag) {
-            attrs.smallcaps = flag;
-            return this;
-        }
-
-        public FontAttributeBuilder setPointSize(int size) {
-            attrs.pointsize = size;
-            return this;
-        }
-
-        public FontAttributeBuilder setFontId(int id) {
-            attrs.fontId = id;
-            return this;
-        }
-        
-        public FontAttributeBuilder setFontName(String name) {
-            attrs.fontName = name ;
-            return this;
-        }
-    }
-
-    /**
-     * Describes the details of the font face used for a particular word.
-     *  
-     * @author Neal Audenaert
-     */
-    public static class FontAttributes {
-        // FIXME make this really immutable, 
-        // NOTE: This is implicitly immutable after it has been built since there are 
-        //       no accessible mutators.
-        private boolean bold;
-        private boolean italic;
-        private boolean underlined;
-        private boolean monospace;
-        private boolean serif;
-        private boolean smallcaps;
-        private int pointsize;
-        private int fontId;
-        private String fontName;
-
-        /** @return <code>true</code> if the represented word is bold. */
-        public boolean isBold() {
-            return bold;
-        }
-
-        /** @return <code>true</code> if the represented word is italicized. */
-        public boolean isItalic() {
-            return italic;
-        }
-
-        /** @return <code>true</code> if the represented word is underlined. */
-        public boolean isUnderlined() {
-            return underlined;
-        }
-
-        /** @return <code>true</code> if the represented word is in a monospace font. */
-        public boolean isMonospace() {
-            return monospace;
-        }
-
-        /** @return <code>true</code> if the represented word is in a serif font. */
-        public boolean isSerif() {
-            return serif;
-        }
-
-        /** @return <code>true</code> if the represented word is in small caps. */
-        public boolean isSmallcaps() {
-            return smallcaps;
-        }
-
-        /** @return the pointsize of this word in printers points (1/72 inch.)
-         */
-        public int getPointsize() {
-            return pointsize;
-        }
-
-        /** @return the identifier for the font used. */
-        public int getFontId() {
-            return fontId;
-        }
-        
-        /** @return the name of the font used. */
-        public String getFontName() {
-            return fontName;
-        }
-    }
+ 
 }
