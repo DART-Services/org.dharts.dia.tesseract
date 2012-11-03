@@ -20,7 +20,7 @@ package org.dharts.dia.tesseract;
 
 import java.util.UUID;
 
-import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
 
 public class PageItem {

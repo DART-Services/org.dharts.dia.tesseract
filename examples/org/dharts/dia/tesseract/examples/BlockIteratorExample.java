@@ -28,12 +28,12 @@ import java.util.Iterator;
 
 import javax.imageio.ImageIO;
 
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.BlockIterator;
 import org.dharts.dia.tesseract.ImageAnalyzer;
 import org.dharts.dia.tesseract.ImageAnalyzerFactory;
 import org.dharts.dia.tesseract.LayoutIterator;
 import org.dharts.dia.tesseract.PageBlock;
-import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
 import org.dharts.dia.tesseract.TesseractException;
 

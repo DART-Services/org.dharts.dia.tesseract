@@ -18,8 +18,8 @@
  */
 package org.dharts.dia.tesseract;
 
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.BlockOrientation;
-import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
 import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 

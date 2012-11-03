@@ -22,8 +22,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator;
-import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
 import org.dharts.dia.tesseract.TesseractException;
 
@@ -74,7 +74,7 @@ public class BlockIterator implements Iterator<PageBlock> {
             }
             
             nextBlock = new PageBlock(iterator.getBlockType(), iterator.getOrientation(), box);
-        } catch (TesseractException te) {
+        } catch (Exception te) {
             LOGGER.error("Could not initialize iterator.", te);
             this.nextBlock = null;
         }
