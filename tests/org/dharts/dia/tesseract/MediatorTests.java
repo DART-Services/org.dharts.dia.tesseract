@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import org.dharts.dia.tesseract.LayoutIterator.BoundingBox;
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.LayoutIterator.Level;
 import org.junit.Test;
 
