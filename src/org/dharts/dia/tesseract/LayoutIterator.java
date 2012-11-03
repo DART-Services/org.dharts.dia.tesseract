@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
+import org.dharts.dia.BoundingBox;
 import org.dharts.dia.tesseract.PublicTypes.Orientation;
 import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 import org.dharts.dia.tesseract.PublicTypes.TextlineOrder;
@@ -353,49 +354,6 @@ public class LayoutIterator {
     //      ParagraphInfo
     //  
     
-    /**
-     * Defines the boundary of a particular feature on the page.
-     *  
-     * @author Neal Audenaert
-     */
-    public static class BoundingBox {
-        public final int left;
-        public final int top;
-        public final int right;
-        public final int bottom;
-        
-        public BoundingBox(int left, int top, int right, int bottom) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
-        }
-        
-        public boolean contains(BoundingBox box) {
-            return false;
-        }
-        
-        public boolean intersects(BoundingBox box) {
-            return false;
-        }
-
-        public BoundingBox intersection(BoundingBox box) {
-            return null;
-        }
-        
-        public BoundingBox union(BoundingBox box) {
-            return null;
-        }
-        
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Bounding Box: (")
-              .append(left).append(", ").append(top).append(") x (")
-              .append(right).append(", ").append(bottom).append(")");
-            return sb.toString();
-        }
-    }
-
     /**
      * Defines the baseline of a particular feature on the page. The baseline is the 
      * line that passes through (x1, y1) and (x2, y2). Note that with vertical text, baselines 

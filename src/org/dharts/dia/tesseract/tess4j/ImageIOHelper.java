@@ -54,7 +54,8 @@ import com.sun.media.imageio.plugins.tiff.TIFFImageWriteParam;
 import com.sun.media.imageio.plugins.tiff.TIFFTag;
 
 public class ImageIOHelper {
-
+    // TODO Move to a utils package
+    
     final static String OUTPUT_FILE_NAME = "Tesstmp";
     final static String TIFF_EXT = ".tif";
     final static String TIFF_FORMAT = "tiff";
