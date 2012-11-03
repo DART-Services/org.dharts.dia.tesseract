@@ -42,7 +42,7 @@ public class LayoutHandle extends BasePageHandle<TessPageIterator> {
      * @param handle The handle to copy.
      * @return A copy of the supplied handle. 
      */
-    static LayoutHandle copy(BasePageHandle<TessPageIterator> handle) {
+    public static LayoutHandle copy(BasePageHandle<TessPageIterator> handle) {
         TessPageIterator newHandle = handle.context.copy(handle.iterator);
         return new LayoutHandle(handle.context, newHandle);
     }

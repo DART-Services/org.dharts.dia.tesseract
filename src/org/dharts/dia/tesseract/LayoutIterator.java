@@ -30,7 +30,9 @@ import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 import org.dharts.dia.tesseract.PublicTypes.TextlineOrder;
 import org.dharts.dia.tesseract.PublicTypes.WritingDirection;
 import org.dharts.dia.tesseract.tess4j.BasePageHandle;
+import org.dharts.dia.tesseract.tess4j.LayoutHandle;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
+import org.dharts.dia.tesseract.tess4j.TessAPI.TessPageIterator;
 
 /**
  * Iterates over the recognized structures (not text) in a page or region of interest. This
@@ -114,7 +116,7 @@ public class LayoutIterator {
         }
     }
     
-    private final BasePageHandle<?> iterator;
+    private final BasePageHandle<TessPageIterator> iterator;
     private final List<CloseListener<LayoutIterator>> listeners = new CopyOnWriteArrayList<>();
 
     /**
@@ -124,10 +126,15 @@ public class LayoutIterator {
      * @param iterator A pointer to be used to reference the corresponding object in 
      *      the C++ code.
      */
-    LayoutIterator(BasePageHandle<?> iterator) {
-        this.iterator = iterator;
+    @SuppressWarnings("unchecked")
+    LayoutIterator(BasePageHandle<? extends TessPageIterator> iterator) {
+        this.iterator = (BasePageHandle<TessPageIterator>)iterator;
     }
 
+    public LayoutIterator copy() {
+        return new LayoutIterator(LayoutHandle.copy(iterator));
+    }
+    
     /**
      * Closes this iterator. Instances must be closed prior to creating a new analyzer.
      */

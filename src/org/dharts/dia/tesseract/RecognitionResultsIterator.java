@@ -62,10 +62,10 @@ public class RecognitionResultsIterator extends LayoutIterator {
         this.iterator = iterator;
     }
 
-//    @Override
-//    public TessAPI.TessResultIterator clone() {
-//        return context.getAPI().TessResultIteratorCopy(iterator);
-//    }
+    @Override
+    public RecognitionResultsIterator copy() {
+        return new RecognitionResultsIterator(ResultHandle.copy(iterator));
+    }
 
     /**
      * Returns the recognized text for the current object at the given level.
