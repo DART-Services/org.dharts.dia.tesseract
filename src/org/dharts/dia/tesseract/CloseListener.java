@@ -18,12 +18,7 @@
  */
 package org.dharts.dia.tesseract;
 
-public interface CloseListener<T> {
-        
-        void closed(T handle);
-    }
-//    public TessAPI.TessPageIterator clone() {
-//        // FIXME need to track and close all cloned LayoutIterators as well. Should not expose 
-//        //       TessAPI to the public.
-//        return context.getAPI().TessPageIteratorCopy(iterator);
-//    }
+public interface CloseListener<T extends LayoutIterator> {
+
+    void closed(T handle);
+}

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.dharts.dia.tesseract.handles;
+package org.dharts.dia.tesseract.tess4j;
 
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -30,18 +30,15 @@ import java.util.HashSet;
 import java.util.Map;
 
 import org.dharts.dia.tesseract.InvalidParameterException;
-import org.dharts.dia.tesseract.LayoutIterator;
 import org.dharts.dia.tesseract.PublicTypes;
-import org.dharts.dia.tesseract.RecognitionResultsIterator;
 import org.dharts.dia.tesseract.TesseractException;
-import org.dharts.dia.tesseract.tess4j.ImageIOHelper;
-import org.dharts.dia.tesseract.tess4j.TessAPI;
 import org.dharts.dia.tesseract.tess4j.TessAPI.TessBaseAPI;
 import org.dharts.dia.tesseract.tess4j.TessAPI.TessPageIterator;
 import org.dharts.dia.tesseract.tess4j.TessAPI.TessResultIterator;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
+// FIXME remove external dependencies
 
 public class TesseractHandle {
     
@@ -65,17 +62,17 @@ public class TesseractHandle {
      * @param value The value to convert.
      * @return <tt>true</tt> if value equals <tt>TessAPI.TRUE</tt>, <tt>false</tt> if
      *      it equals <tt>TessAPI.FALSE</tt>
-     * @throws TesseractException If the supplied value is any value other than 
+     * @throws IllegalArgumentException If the supplied value is any value other than 
      *      <tt>TessAPI.TRUE</tt> or <tt>TessAPI.FALSE</tt>.
      */
-    public static boolean toBoolean(int value) throws TesseractException {
+    public static boolean toBoolean(int value) {
         boolean result;
         if (value == TessAPI.TRUE) {
             result = true;
         } else if (value == TessAPI.FALSE) {
             result = false;
         } else {
-            throw new TesseractException("Invlid boolean value. Expected " + 
+            throw new IllegalArgumentException("Invlid boolean value. Expected " + 
                     TessAPI.TRUE  + " or " + TessAPI.FALSE + ". Got " + value);
         }
         
@@ -341,7 +338,6 @@ public class TesseractHandle {
         this.api.TessBaseAPIReadConfigFile(handle, filename, initOnly);
     }
 
-   
     /**
      * Sets the page segmentation mode to be used by this handle.
      * 
@@ -535,30 +531,15 @@ public class TesseractHandle {
     /* (non-Javadoc)
      * @see org.dharts.dia.tesseract.tess4j.TessAPI#TessBaseAPIAnalyseLayout(org.dharts.dia.tesseract.tess4j.TessAPI.TessBaseAPI)
      */
-    public LayoutIterator analyseLayout() throws InvalidStateException {
+    public LayoutHandle analyseLayout() throws InvalidStateException {
+        // FIXME NOT THREAD SAFE (applies to most methods in class)
         requireState(State.IMAGE_SET);
         
-        // FIXME Construct a handle to access the iterator, rather than an iterator itself.
-        //       Clients can construct the iterator on the handle.
-        final TessPageIterator piHandle = api.TessBaseAPIAnalyseLayout(handle);
-        LayoutIterator iterator = new LayoutIterator(new ReleasableContext() {
-                // FIXME need to allow the layout iterator to be cloned.
-            
-                @Override
-                public void release() {
-                    api.TessPageIteratorDelete(piHandle);
-                    TesseractHandle.this.state = State.IMAGE_SET;
-                }
-                
-                @Override
-                public TessAPI getAPI() {
-                    // TODO proxy the methods needed by the layout iterator
-                    return TesseractHandle.this.api;
-                }
-            }, piHandle);
+        TessPageIterator piHandle = api.TessBaseAPIAnalyseLayout(handle);
+        HandleContext<TessPageIterator> context = new LayoutHandleContext(piHandle);
                 
         this.state = State.ANALYZING;
-        return iterator;
+        return LayoutHandle.create(context, piHandle);
     }
 //
 //    /* (non-Javadoc)
@@ -574,29 +555,15 @@ public class TesseractHandle {
     /* (non-Javadoc)
      * @see org.dharts.dia.tesseract.tess4j.TessAPI#TessBaseAPIGetIterator(org.dharts.dia.tesseract.tess4j.TessAPI.TessBaseAPI)
      */
-    public RecognitionResultsIterator recognize() throws InvalidStateException {
+    public ResultHandle recognize() throws InvalidStateException {
+        // FIXME NOT THREAD SAFE
         requireState(State.IMAGE_SET);
         
-        // FIXME Construct a handle to access the iterator, rather than an iterator itself.
-        //       Clients can construct the iterator on the handle.
-        final TessResultIterator riHandle = api.TessBaseAPIGetIterator(handle);
-        RecognitionResultsIterator iterator = new RecognitionResultsIterator(
-                new ReleasableContext() {
-                    @Override
-                    public void release() {
-                        api.TessResultIteratorDelete(riHandle);
-                        TesseractHandle.this.state = State.IMAGE_SET;
-                    }
-                    
-                    @Override
-                    public TessAPI getAPI() {
-                        // TODO proxy the methods needed by the layout iterator
-                        return TesseractHandle.this.api;
-                    }
-                }, riHandle);
+        TessResultIterator riHandle = api.TessBaseAPIGetIterator(handle);
+        HandleContext<TessResultIterator> context = new ResultHandleContext(riHandle);
         
         this.state = State.ANALYZING;
-        return iterator;
+        return ResultHandle.create(context, riHandle);
     }
 
     
@@ -628,7 +595,55 @@ public class TesseractHandle {
     // EXCEPTION CLASSES
     //========================================================================================
     
+    class LayoutHandleContext extends HandleContext<TessPageIterator> {
+
+        LayoutHandleContext(TessPageIterator base) {
+            super(base);
+        }
+        
+        protected TessPageIterator doCopy(TessPageIterator handle) {
+            return api.TessPageIteratorCopy(handle);
+        }
+        
+        protected void doClose(TessPageIterator handle) {
+            api.TessPageIteratorDelete(handle);
+        }
+        
+        protected TessAPI getAPI() {
+            return api;
+        }
+        
+        protected void release() {
+            TesseractHandle.this.state = State.IMAGE_SET;
+        }
+    }
     
+    class ResultHandleContext extends HandleContext<TessResultIterator> {
+        
+        ResultHandleContext(TessResultIterator base) {
+            super(base);
+        }
+        
+        protected TessResultIterator doCopy(TessResultIterator handle) {
+            // TODO guard state
+            return api.TessResultIteratorCopy(handle);
+        }
+        
+        protected void doClose(TessResultIterator handle) {
+            // TODO guard state
+            api.TessResultIteratorDelete(handle);
+        }
+        
+        protected TessAPI getAPI() {
+            return api;
+        }
+        
+        protected void release() {
+            TesseractHandle.this.state = State.IMAGE_SET;
+        }
+    }
+    
+    // FIXME replace these with runtime exceptions: IllegalStateException
     public static class HandleClosedException extends TesseractException {
         
     }

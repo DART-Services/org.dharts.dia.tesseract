@@ -20,13 +20,10 @@ package org.dharts.dia.tesseract;
 
 import java.nio.IntBuffer;
 
-import org.apache.log4j.Logger;
 import org.dharts.dia.FontAttributes;
-import org.dharts.dia.tesseract.handles.ReleasableContext;
-import org.dharts.dia.tesseract.handles.TesseractHandle;
-import org.dharts.dia.tesseract.tess4j.TessAPI;
+import org.dharts.dia.tesseract.tess4j.ResultHandle;
 
-// FIXME Wrap TessAPI in lower level handle
+import static org.dharts.dia.tesseract.tess4j.TesseractHandle.toBoolean;
 
 /**
  * Class to iterate over tesseract results, providing access to all levels of the page 
@@ -43,7 +40,7 @@ import org.dharts.dia.tesseract.tess4j.TessAPI;
  * @author Neal Audenaert
  */
 public class RecognitionResultsIterator extends LayoutIterator {
-    private static final Logger LOGGER = Logger.getLogger(RecognitionResultsIterator.class);
+//    private static final Logger LOGGER = Logger.getLogger(RecognitionResultsIterator.class);
 
     
     // FIXME The API docs have been taken more or less directly from the underlying C++ 
@@ -57,12 +54,11 @@ public class RecognitionResultsIterator extends LayoutIterator {
     //
     //       This class appears represents word-level functionality (validate this)
     
-    private final TessAPI.TessResultIterator iterator;
+//    private final TessAPI.TessResultIterator iterator;
+    private final ResultHandle iterator;
 
-    public RecognitionResultsIterator(ReleasableContext context, TessAPI.TessResultIterator iterator) {
-        // FIXME make this package scoped. It should accept a ResultIteratorHandle (to be 
-        //       returned by TesseractHandle 
-        super(context, iterator);
+    RecognitionResultsIterator(ResultHandle iterator) {
+        super(iterator);
         this.iterator = iterator;
     }
 
@@ -77,9 +73,8 @@ public class RecognitionResultsIterator extends LayoutIterator {
      * @param level The level in the page hierarchy to evaluate.
      * @return The recognized text of the current object.
      */
-    public final String getUTF8Text(Level level) {
-        // FIXME This returns a string and will result in a memory leak
-        return context.getAPI().TessResultIteratorGetUTF8Text(iterator, level.value);
+    public final String getText(Level level) {
+        return this.iterator.getUTF8Text(level.value); 
     }
 
     /** 
@@ -90,7 +85,7 @@ public class RecognitionResultsIterator extends LayoutIterator {
      * @return The mean confidence of the current object at the given level.
      */
     public final float getConfidence(Level level) {
-        return context.getAPI().TessResultIteratorConfidence(iterator, level.value);
+        return this.iterator.getConfidence(level.value);
     }
 
     // ============= Functions that refer to words only ============
@@ -112,53 +107,32 @@ public class RecognitionResultsIterator extends LayoutIterator {
         IntBuffer pointsize = IntBuffer.allocate(1);
         IntBuffer fontId = IntBuffer.allocate(1);
 
-        // NOTE Unlike other methods that return a String, the underlying Tessearact API 
-        //      documents that this String points to an internal table that will be managed 
-        //      in the same lifespan as the iterator itself. Therefore, this string does not
-        //      need to be deleted and will not result in a memory leak.
-        String fontName = context.getAPI().TessResultIteratorWordFontAttributes(iterator, 
+        String fontName = iterator.getWordFontAttributes(
                 isBold, isItalic, isUnderlined, isMonospace, isSerif, isSmallcaps, pointsize, fontId);
 
         FontAttributes.Builder builder = new FontAttributes.Builder();
-        try {
-            builder.setIsBold(TesseractHandle.toBoolean(isBold.get()))
-                   .setIsItalic(TesseractHandle.toBoolean(isItalic.get()))
-                   .setIsUnderline(TesseractHandle.toBoolean(isUnderlined.get()))
-                   .setIsMonospace(TesseractHandle.toBoolean(isMonospace.get()))
-                   .setIsSerif(TesseractHandle.toBoolean(isSerif.get()))
-                   .setIsSmallcaps(TesseractHandle.toBoolean(isSmallcaps.get()))
-                   .setPointSize(pointsize.get())
-                   .setFontId(fontId.get())
-                   .setFontName(fontName);
-            
-            return builder.build();
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Could not retrieve font attributed.", ex);
-            throw new RuntimeException(ex);
-        }
+        builder.setIsBold(toBoolean(isBold.get()))
+               .setIsItalic(toBoolean(isItalic.get()))
+               .setIsUnderline(toBoolean(isUnderlined.get()))
+               .setIsMonospace(toBoolean(isMonospace.get()))
+               .setIsSerif(toBoolean(isSerif.get()))
+               .setIsSmallcaps(toBoolean(isSmallcaps.get()))
+               .setPointSize(pointsize.get())
+               .setFontId(fontId.get())
+               .setFontName(fontName);
+        
+        return builder.build();
     }
 
     /** @return <code>true</code> if the current word was found in a dictionary. */
     public final boolean isDictionaryWord() {
-        int value = context.getAPI().TessResultIteratorWordIsFromDictionary(iterator);
+        return iterator.isDictionaryWord();
         
-        try {
-            return TesseractHandle.toBoolean(value);
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Invalid boolean value returned by isDictionaryWord.", ex);
-            throw new RuntimeException(ex);
-        }
     }
     
-    /** @return <code>true</code> if the current word is numeric. */
+    /** @return {@code true} if the current word is numeric. */
     public final boolean isNumeric() {
-        int value = context.getAPI().TessResultIteratorWordIsNumeric(iterator);
-        try {
-            return TesseractHandle.toBoolean(value);
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Invalid boolean value returned by isNumeric.", ex);
-            throw new RuntimeException(ex);
-        }
+        return iterator.isNumeric();
     }
 
     //=======================================================================================
@@ -168,40 +142,19 @@ public class RecognitionResultsIterator extends LayoutIterator {
     // If iterating at a higher level object than symbols, eg words, these methods
     // will return the attributes of the first symbol in that word.
     
-    /** @return <code>true</code> if the current symbol is a subscript. */
+    /** @return {@code true} if the current symbol is a subscript. */
     public final boolean isSubscript() {
-        int value = context.getAPI().TessResultIteratorSymbolIsSubscript(iterator);
-        
-        try {
-            return TesseractHandle.toBoolean(value);
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Invalid boolean value returned by isSubscript.", ex);
-            throw new RuntimeException(ex);
-        }
+        return iterator.isSubscript();
     }
 
     /** @return <code>true</code> if the current symbol is a superscript */
     public final boolean isSuperscript() {
-        int value = context.getAPI().TessResultIteratorSymbolIsSuperscript(iterator);
-        
-        try {
-            return TesseractHandle.toBoolean(value);
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Invalid boolean value returned by isSuperscript.", ex);
-            throw new RuntimeException(ex);
-        }
+        return iterator.isSuperscript();
     }
 
     /** @return <code>true</code> if the current symbol is a dropcap. */
     public final boolean isDropcap() {
-        int value = context.getAPI().TessResultIteratorSymbolIsDropcap(iterator);
-
-        try {
-            return TesseractHandle.toBoolean(value);
-        } catch (Exception ex) {
-            LOGGER.error("Internal Error: Invalid boolean value returned by isDropcap.", ex);
-            throw new RuntimeException(ex);
-        }
+        return iterator.isDropcap();
     }
 
     // TODO not implemented in Tess4J API
@@ -215,11 +168,4 @@ public class RecognitionResultsIterator extends LayoutIterator {
     //      WordLattice
     //
     // Also, No hooks for the ChoiceIterator
-    
-    //========================================================================================
-    // INNER CLASSES
-    //========================================================================================
-    
-    
- 
 }

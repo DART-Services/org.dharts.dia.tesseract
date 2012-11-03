@@ -28,8 +28,7 @@ import org.dharts.dia.tesseract.PublicTypes.Orientation;
 import org.dharts.dia.tesseract.PublicTypes.PolyBlockType;
 import org.dharts.dia.tesseract.PublicTypes.TextlineOrder;
 import org.dharts.dia.tesseract.PublicTypes.WritingDirection;
-import org.dharts.dia.tesseract.handles.ReleasableContext;
-import org.dharts.dia.tesseract.handles.TesseractHandle;
+import org.dharts.dia.tesseract.tess4j.BasePageHandle;
 import org.dharts.dia.tesseract.tess4j.TessAPI;
 
 /**
@@ -114,8 +113,7 @@ public class LayoutIterator {
         }
     }
     
-    private final TessAPI.TessPageIterator iterator;
-    protected final ReleasableContext context;
+    private final BasePageHandle<?> iterator;
     private final List<CloseListener<LayoutIterator>> listeners = new CopyOnWriteArrayList<>();
 
     /**
@@ -125,10 +123,7 @@ public class LayoutIterator {
      * @param iterator A pointer to be used to reference the corresponding object in 
      *      the C++ code.
      */
-    public LayoutIterator(ReleasableContext context, TessAPI.TessPageIterator iterator) {
-        // FIXME make this package scoped. It should accept a PageIteratorHandle (to be 
-        //       returned by TesseractHandle 
-        this.context = context;
+    LayoutIterator(BasePageHandle<?> iterator) {
         this.iterator = iterator;
     }
 
@@ -136,7 +131,7 @@ public class LayoutIterator {
      * Closes this iterator. Instances must be closed prior to creating a new analyzer.
      */
     public void close() {
-        context.release();
+        iterator.dispose();
         for (CloseListener<LayoutIterator> ears: listeners) {
             ears.closed(this);
         }
@@ -163,7 +158,7 @@ public class LayoutIterator {
      * after processing has begun, if desired.
      */
     void begin() {
-        context.getAPI().TessPageIteratorBegin(iterator);
+        iterator.begin();
     }
 
     /**
@@ -171,7 +166,7 @@ public class LayoutIterator {
      * hierarchy and returns <code>false</code> if the end of the page was reached.
      * 
      * <p>
-     * NOTE that <code>{@link Level.SYMBOL}</code> will skip non-text blocks, but all other 
+     * NOTE that <code>{@link LayoutIterator.Level.SYMBOL}</code> will skip non-text blocks, but all other 
      * level values will visit each non-text block once. Think of non text blocks as containing 
      * a single paragraph, with a single line, with a single imaginary word.
      * 
@@ -185,14 +180,7 @@ public class LayoutIterator {
      *      the iterator can be called again (at this level). 
      */
     public boolean next(Level level) {
-        int atEnd = context.getAPI().TessPageIteratorNext(iterator, level.ordinal());
-        
-        try {
-            return TesseractHandle.toBoolean(atEnd);
-        } catch (TesseractException e) {
-            LOGGER.error("Invalid boolean supplied.", e);
-            return false;
-        }
+        return iterator.next(level.value);
     }
 
     /**
@@ -218,14 +206,7 @@ public class LayoutIterator {
      *      level of the page hierarchy. 
      */
     public boolean isAtBeginningOf(Level level) {
-        int result = context.getAPI().TessPageIteratorIsAtBeginningOf(iterator, level.ordinal());
-        
-        try {
-            return TesseractHandle.toBoolean(result);
-        } catch (TesseractException e) {
-            LOGGER.error("Invalid boolean supplied.", e);
-            return false;
-        }
+        return iterator.isAtBeginningOf(level.value);
     }
   
     /**
@@ -252,23 +233,16 @@ public class LayoutIterator {
      * @param level Specifies the level in the page hierarchy with respect to which the current
      *      element should be evaluated. For example, in the case that we want to know 
      *      if the current word is the last word in a paragraph, this should be 
-     *      <code>{@link Level.PARA}</code>.
+     *      {@link LayoutIterator.Level.PARA}.
      * @param element The type of the element. This specifies how to identify the current 
      *      element to be evaluated. For example, in the case that we want to know 
      *      if the current word is the last word in a paragraph, this should be 
-     *      <code>{@link Level.WORD}</code>.
-     * @return <code>true</code> if the current element of the specified type is the last in 
-     *      the indicate page structure; <code>false</code> otherwise.
+     *      {@link LayoutIterator.Level.WORD}.
+     * @return {@code true} if the current element of the specified type is the last in 
+     *      the indicate page structure; {@code false} otherwise.
      */
     public boolean isAtFinalElement(Level level, Level element) {
-        int result = context.getAPI().TessPageIteratorIsAtFinalElement(iterator, level.value, element.value);
-        
-        try {
-            return TesseractHandle.toBoolean(result);
-        } catch (TesseractException e) {
-            LOGGER.error("Invalid boolean supplied.", e);
-            return false;
-        }
+        return this.iterator.isAtFinalElement(level.value, element.value);
     }
 
     //=========================================================================================
@@ -280,31 +254,22 @@ public class LayoutIterator {
      * See comment on coordinate system above.
      * 
      * @param level The level in the page hierarchy to retrieve the bounding box for.
-     * @return The bounding box of the current object at the given level.
-     * @throws TesseractException If there is no such object at the current position.
+     * @return The bounding box of the current object at the given level. May return 
+     *      {@code null} if there is no bounding box for this iterator at the current level.
      */
-    public BoundingBox getBoundingBox(Level level) throws TesseractException {
+    public BoundingBox getBoundingBox(Level level) {
         IntBuffer left = IntBuffer.allocate(1);
         IntBuffer top = IntBuffer.allocate(1);
         IntBuffer right = IntBuffer.allocate(1);
         IntBuffer bottom = IntBuffer.allocate(1);
         
-        int exists = context.getAPI().TessPageIteratorBoundingBox(iterator, level.value,
-                            left, top, right, bottom);
-        
-        if (!TesseractHandle.toBoolean(exists)) {
-            return null; // HACK: for testing
-//            throw new TesseractException("There is no current element at this level of " +
-//            		"the page hierarchy (" + level + ").");
-        }
-        
-        return new BoundingBox(left.get(), top.get(), right.get(), bottom.get());
+        boolean exists = iterator.getBoundingBox(level.value, left, top, right, bottom);
+        return (exists) ? new BoundingBox(left.get(), top.get(), right.get(), bottom.get()) : null;
     }
     
     /** @return the type of the current block. */
     public PolyBlockType getBlockType() {
-        int type = context.getAPI().TessPageIteratorBlockType(iterator);
-        
+        int type = iterator.getBlockType();
         for (PolyBlockType pbt: PolyBlockType.values()) {
             if (type == pbt.value) {
                 return pbt;
@@ -321,45 +286,36 @@ public class LayoutIterator {
      * may be vertical.
      * 
      * @param level The level in the page hierarchy to retrieve the baseline for.
-     * @return the baseline of the current object at the given level
-     * @throws TesseractException If no baseline exists at the current position
+     * @return the baseline of the current object at the given level. May return {@code null}
+     *      if the baseline could not be obtained.
      */
     public Baseline getBaseline(Level level) throws TesseractException {
-        // FIXME this doesn't seem to work reliably for Blocks
         IntBuffer x1 = IntBuffer.allocate(1);
         IntBuffer y1 = IntBuffer.allocate(1);
         IntBuffer x2 = IntBuffer.allocate(1);
         IntBuffer y2 = IntBuffer.allocate(1);
         
-        int exists = context.getAPI().TessPageIteratorBaseline(iterator, level.value, x1, y1, x2, y2);
-        
-        if (!TesseractHandle.toBoolean(exists)) {
-            throw new TesseractException("There is no current element at this level of " +
-                    "the page hierarchy (" + level + ").");
-        }
-        
-        return new Baseline(x1.get(), y1.get(), x2.get(), y2.get());
+        boolean success = iterator.getBaseline(level.value, x1, y1, x2, y2);
+        return (success) ? new Baseline(x1.get(), y1.get(), x2.get(), y2.get()) : null;
     }
     
     /** 
      * Returns orientation for the block the iterator points to. Unlike other methods to 
      * query the page layout details, this does not take a <code>level</code> argument as it
      * always operates at the top-level of the page hierarchy, the 
-     * <code>{@link Level.BLOCK}</code>.
+     * <code>{@link LayoutIterator.Level.BLOCK}</code>.
      * 
      * @return The orientation for the block the iterator points to.
      */
     public BlockOrientation getOrientation() {
-        int value;
         IntBuffer orientationBuf = IntBuffer.allocate(1);
         IntBuffer writingDirectionBuf = IntBuffer.allocate(1);
         IntBuffer textlineOrderBuf = IntBuffer.allocate(1);
         FloatBuffer deskewAngleBuf = FloatBuffer.allocate(1);
         
-        context.getAPI().TessPageIteratorOrientation(iterator, 
-                orientationBuf, writingDirectionBuf, textlineOrderBuf, deskewAngleBuf);
+        iterator.getOrientation(orientationBuf, writingDirectionBuf, textlineOrderBuf, deskewAngleBuf);
         
-        value = orientationBuf.get();
+        int value = orientationBuf.get();
         Orientation orientation = Orientation.UP;
         for (Orientation o: Orientation.values()) {
             if (value == o.value) {
@@ -408,7 +364,7 @@ public class LayoutIterator {
         public final int right;
         public final int bottom;
         
-        private BoundingBox(int left, int top, int right, int bottom) {
+        public BoundingBox(int left, int top, int right, int bottom) {
             this.left = left;
             this.top = top;
             this.right = right;
@@ -494,5 +450,4 @@ public class LayoutIterator {
             this.deskewAnge = angle;
         }
     }
-
 }

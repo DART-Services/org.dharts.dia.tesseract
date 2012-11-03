@@ -30,8 +30,10 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.dharts.dia.tesseract.PublicTypes.OcrEngineMode;
 import org.dharts.dia.tesseract.PublicTypes.PageSegMode;
-import org.dharts.dia.tesseract.handles.TesseractHandle;
-import org.dharts.dia.tesseract.handles.TesseractHandle.InvalidStateException;
+import org.dharts.dia.tesseract.tess4j.LayoutHandle;
+import org.dharts.dia.tesseract.tess4j.ResultHandle;
+import org.dharts.dia.tesseract.tess4j.TesseractHandle;
+import org.dharts.dia.tesseract.tess4j.TesseractHandle.InvalidStateException;
 
 /**
  * Manages a connection to the underlying Tesseract implementation and creates 
@@ -471,7 +473,8 @@ public class ImageAnalyzerFactory {
             checkIterator();  // FIXME state should be managed by handle now
             checkClosed();
             
-            return wrapIterator(handle.analyseLayout());
+            LayoutHandle layoutHandle = handle.analyseLayout();
+            return wrapIterator(new LayoutIterator(layoutHandle));
         }
         
         @Override
@@ -480,7 +483,8 @@ public class ImageAnalyzerFactory {
             checkClosed();
             
             handle.setRectangle(rect);
-            return wrapIterator(handle.analyseLayout());
+            LayoutHandle layoutHandle = handle.analyseLayout();
+            return wrapIterator(new LayoutIterator(layoutHandle));
         }
         
         @Override
@@ -488,7 +492,8 @@ public class ImageAnalyzerFactory {
             checkIterator();
             checkClosed();
             
-            return wrapIterator(handle.recognize());
+            ResultHandle resultHandle = handle.recognize();
+            return wrapIterator(new RecognitionResultsIterator(resultHandle));
         }
         
         @Override
@@ -497,7 +502,8 @@ public class ImageAnalyzerFactory {
             checkClosed();
             
             handle.setRectangle(rect);
-            return (RecognitionResultsIterator)(iterator = handle.recognize());
+            ResultHandle resultHandle = handle.recognize();
+            return wrapIterator(new RecognitionResultsIterator(resultHandle));
         }
     }
 }
