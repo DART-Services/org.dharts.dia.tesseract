@@ -1,11 +1,24 @@
-Fork of the Tess4J codebase. Right now, this is intended for improved documentation. Overtime, 
-we will likely need to modify the main C header files and re-compile DLLs to provide a cleaner
-interface for the JNI bridge. Notably, we need to avoid the potential memory leak issues caused
-returning refernces to objects (e.g., Strings) that need to be deleted, without providing hooks
-to delete those objects.  
+JNI inteface to Tesseract along with wrappers to help isolate that C++ code from out of order
+or invalid calls. The core {@link Tess4J} is a fork of the 
+<a href="http://tess4j.sourceforge.net/">Tess4J</a> codebase. Right now, this is intended for 
+improved documentation. Overtime, we will likely need to modify the main C header files and 
+re-compile DLLs to provide a cleaner interface for the JNI bridge. Notably, we need to avoid 
+the potential memory leak issues caused by returning refernces to objects (e.g., Strings) that 
+need to be deleted, without providing hooks to delete those objects.
 
-<p>
-This package is intended only for internal use and should not be used by clients of 
+<p>The handle classes in this packages ({@link TesseractHandle}, {@link LayoutHandle} and 
+{@link ResultHandle}) wrap the low-level APIs in order to provide cleaner method signature and 
+(more importantly) to guard against incorrect invocation of the Tesseract API. Tesseract 
+handles are stateful and methods must be invoked in the correct order. Failure to do so results 
+in undefined behavior. Frequently, that means a segmentation faults. These handles implement an 
+internal representation of the state of the handles they wrap and throw 
+{@link IllegalStateException} when they are used incorrectly.</p>
+
+<p>This package is intended only for internal use and should not be used by clients of 
 the <code>org.dharts.dia.tesseract</code> package. It's classes and method signatures are 
-subject to change at any time.
-</p> 
+subject to change at any time.</p> 
+
+<p>NOTE: This package needs (and has not yet received) extensive testing. It is intended to 
+protect against errors in the underlying implementation of Tesseract which will crash not only
+the running Java application, but the JVM it is running on. These errors, if encountered in a 
+production web-application, will bring down the entire Servlet container.</p>  
